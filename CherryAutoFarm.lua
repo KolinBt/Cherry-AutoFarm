@@ -5,7 +5,7 @@ local visitedObjects = {}
 local function smoothTeleport(targetPosition)
     if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
         local rootPart = player.Character.HumanoidRootPart
-        rootPart.CFrame = CFrame.new(targetPosition + Vector3.new(0, 3, 0))
+        rootPart.CFrame = CFrame.new(targetPosition)
     end
 end
 
@@ -13,23 +13,33 @@ local function scanBlossomColliders()
     local colliders = {}
     local ringsFolder = workspace:WaitForChild("Interiors"):WaitForChild("BlossomShakedownInterior"):WaitForChild("RingPickups")
     for _, ring in pairs(ringsFolder:GetDescendants()) do
-        if ring:IsA("BasePart") then
+        if ring:IsA("BasePart") and not visitedObjects[ring] then
             table.insert(colliders, ring)
         end
     end
     return colliders
 end
 
+local function sortByProximity(colliders)
+    local rootPart = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+    if rootPart then
+        table.sort(colliders, function(a, b)
+            return (a.Position - rootPart.Position).Magnitude < (b.Position - rootPart.Position).Magnitude
+        end)
+    end
+    return colliders
+end
+
 local function collectAllBlossomRings()
     local blossomColliders = scanBlossomColliders()
+    blossomColliders = sortByProximity(blossomColliders)
     for _, ringCollider in pairs(blossomColliders) do
-        if not visitedObjects[ringCollider] then
-            smoothTeleport(ringCollider.Position)
-            wait(0.05)
-            visitedObjects[ringCollider] = true
-        end
+        smoothTeleport(ringCollider.Position)
+        wait(0.01) -- Tempo mínimo para evitar falhas
+        visitedObjects[ringCollider] = true
     end
 end
+
 spawn(function()
     while wait(0.1) do
         if isFarming then
@@ -37,6 +47,7 @@ spawn(function()
         end
     end
 end)
+
 local ScreenGui = Instance.new("ScreenGui")
 local MainFrame = Instance.new("Frame")
 local ToggleButton = Instance.new("TextButton")
