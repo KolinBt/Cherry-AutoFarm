@@ -17,12 +17,26 @@ local function enableAntiAfk()
 	end)
 end
 
--- Teleporte suave
+-- Teleporte suave até o centro do anel (com múltiplos passos)
 local function smoothTeleport(targetPosition)
 	local rootPart = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-	if rootPart then
-		rootPart.CFrame = CFrame.new(targetPosition + Vector3.new(0, 3, 0))
+	if not rootPart then return end
+
+	local startPosition = rootPart.Position
+	local steps = 10
+	for i = 1, steps do
+		local alpha = i / steps
+		local intermediatePosition = startPosition:Lerp(targetPosition + Vector3.new(0, 1.5, 0), alpha)
+		rootPart.CFrame = CFrame.new(intermediatePosition)
+		task.wait(0.02)
 	end
+end
+
+-- Detectar se tocou no anel (simples checagem de proximidade)
+local function isRingCollected(ring)
+	local rootPart = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	if not rootPart then return false end
+	return (ring.Position - rootPart.Position).Magnitude < 5
 end
 
 -- Buscar e ordenar anéis
@@ -43,12 +57,17 @@ local function getRings()
 	return rings
 end
 
--- Coletar anéis
+-- Coletar anéis continuamente
 local function autoFarmRings()
 	for _, ring in pairs(getRings()) do
+		if visitedObjects[ring] then continue end
+
 		smoothTeleport(ring.Position)
 		wait(0.1)
-		visitedObjects[ring] = true
+
+		if isRingCollected(ring) then
+			visitedObjects[ring] = true
+		end
 	end
 end
 
